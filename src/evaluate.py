@@ -18,15 +18,11 @@ def get_latest_job():
 def download_model(model_uri):
     pathlib.Path("/tmp/casas_model").mkdir(exist_ok=True)
     s3 = boto3.client("s3", region_name=REGION)
-    
-    # parse bucket and key from URI
-    uri = model_uri.replace("s3://", "")
+    uri    = model_uri.replace("s3://", "")
     bucket = uri.split("/")[0]
     key    = "/".join(uri.split("/")[1:])
-    
-    print(f"Downloading model from S3...")
+    print("Downloading model from S3...")
     s3.download_file(bucket, key, "/tmp/casas_model/model.tar.gz")
-    
     with tarfile.open("/tmp/casas_model/model.tar.gz") as t:
         t.extractall("/tmp/casas_model/")
     print("Model extracted.")
@@ -39,15 +35,19 @@ def evaluate():
     X     = df.drop("label", axis=1)
     y_raw = df["label"]
 
-    # encode labels
-    y = encoder.transform(y_raw)
+    # only keep labels the encoder knows
+    known = set(encoder.classes_)
+    mask  = y_raw.isin(known)
+    X     = X[mask]
+    y_raw = y_raw[mask]
+
+    y     = encoder.transform(y_raw)
     preds = model.predict(X)
 
     acc = accuracy_score(y, preds)
     print(f"\nTest accuracy: {acc:.4f}")
     print("\nClassification report:")
-    print(classification_report(y, preds,
-          target_names=encoder.classes_, zero_division=0))
+    print(classification_report(y, preds, zero_division=0))
 
     pathlib.Path("metrics").mkdir(exist_ok=True)
     metrics = {
