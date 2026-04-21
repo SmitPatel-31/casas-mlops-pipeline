@@ -1,0 +1,5 @@
+[core]
+    remote = myremote
+['remote "myremote"']
+    url = s3://casas-mlops-smit/casas-dvc
+    region = us-east-1
