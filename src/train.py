@@ -9,7 +9,7 @@ BUCKET  = "casas-mlops-smit"
 REGION  = "us-east-1"
 PREFIX  = "casas"
 
-params  = yaml.safe_load(open("params.yaml"))
+params     = yaml.safe_load(open("params.yaml"))
 xgb_params = params["xgboost"]
 
 session = sagemaker.Session(boto_session=boto3.Session(region_name=REGION))
@@ -31,6 +31,7 @@ def run_training(s3_input):
         instance_type="ml.m5.large",
         framework_version="1.2-1",
         py_version="py3",
+        dependencies=["src/requirements.txt"],
         hyperparameters={
             "max_depth":    xgb_params["max_depth"],
             "eta":          xgb_params["eta"],
@@ -49,18 +50,17 @@ def run_training(s3_input):
     print("Submitting SageMaker training job...")
     estimator.fit({"train": train_input}, wait=True, logs=True)
 
-    job_name = estimator.latest_training_job.name
+    job_name  = estimator.latest_training_job.name
     model_uri = f"s3://{BUCKET}/{PREFIX}/models/{job_name}/output/model.tar.gz"
     print(f"Training complete.")
     print(f"Job name: {job_name}")
     print(f"Model URI: {model_uri}")
 
-    # save job name for evaluate.py
+    pathlib.Path("models").mkdir(exist_ok=True)
     with open("models/latest_job.txt", "w") as f:
         f.write(job_name + "\n")
         f.write(model_uri + "\n")
 
 if __name__ == "__main__":
-    pathlib.Path("models").mkdir(exist_ok=True)
     s3_input = upload_data()
     run_training(s3_input)
