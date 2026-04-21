@@ -1,0 +1,38 @@
+stages:
+  ingest:
+    cmd: python src/ingest.py
+    deps:
+      - src/ingest.py
+    outs:
+      - data/raw
+
+  preprocess:
+    cmd: python src/preprocess.py
+    deps:
+      - src/preprocess.py
+      - data/raw
+    params:
+      - window_size
+      - step_size
+    outs:
+      - data/processed
+
+  train:
+    cmd: python src/train.py
+    deps:
+      - src/train.py
+      - data/processed
+    params:
+      - xgboost
+    outs:
+      - models/
+
+  evaluate:
+    cmd: python src/evaluate.py
+    deps:
+      - src/evaluate.py
+      - models/
+      - data/splits
+    metrics:
+      - metrics/eval_metrics.json:
+          cache: false
